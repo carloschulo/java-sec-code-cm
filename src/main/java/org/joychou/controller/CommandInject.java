@@ -9,11 +9,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.util.regex.Pattern;
 
 @RestController
 public class CommandInject {
 
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
+
+    private static final Pattern HOST_PATTERN = Pattern.compile("^([a-zA-Z0-9][a-zA-Z0-9.-]*|\\[[a-fA-F0-9:]+\\])(:[0-9]+)?$");
 
     /**
      * http://localhost:8080/codeinject?filepath=/tmp;cat /etc/passwd
@@ -41,7 +44,10 @@ public class CommandInject {
 
         String host = request.getHeader("host");
         logger.info(host);
-        String[] cmdList = new String[]{"sh", "-c", "curl " + host};
+        if (host == null || !HOST_PATTERN.matcher(host).matches()) {
+            return "Bad boy. I got u.";
+        }
+        String[] cmdList = new String[]{"curl", host};
         ProcessBuilder builder = new ProcessBuilder(cmdList);
         builder.redirectErrorStream(true);
         Process process = builder.start();
