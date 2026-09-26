@@ -88,7 +88,6 @@ public class Deserialize {
     @RequestMapping("/jackson")
     public void Jackson(String payload) {
         ObjectMapper mapper = new ObjectMapper();
-        mapper.enableDefaultTyping();
         try {
             Object obj = mapper.readValue(payload, Object.class);
             mapper.writeValueAsString(obj);
