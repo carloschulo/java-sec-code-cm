@@ -20,6 +20,9 @@ public class Shiro {
     byte[] KEYS = java.util.Base64.getDecoder().decode("kPH+bIxk5D2deZiIxcaaaA==");
     private final static String DELETE_ME = "deleteMe";
     AesCipherService acs = new AesCipherService();
+    private final static ObjectInputFilter FILTER = ObjectInputFilter.Config.createFilter(
+            "!org.apache.commons.**;!com.sun.**;!javassist.**;!org.apache.shiro.crypto.**;org.apache.shiro.**;org.joychou.**;java.lang.*;java.util.*;!*"
+    );
 
 
     @GetMapping(value = "/shiro/deserialize")
@@ -35,6 +38,7 @@ public class Shiro {
             byte[] aesDecrypt = acs.decrypt(b64DecodeRememberMe, KEYS).getBytes();
             ByteArrayInputStream bytes = new ByteArrayInputStream(aesDecrypt);
             ObjectInputStream in = new ObjectInputStream(bytes);
+            in.setObjectInputFilter(FILTER);
             in.readObject();
             in.close();
         } catch (Exception e){
