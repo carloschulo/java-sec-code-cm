@@ -56,14 +56,28 @@ public class FileUpload {
             return "redirect:/file/status";
         }
 
+        String fileName = file.getOriginalFilename();
+        if (fileName == null || fileName.isEmpty() || SecurityUtil.pathFilter(fileName) == null
+                || fileName.contains("/") || fileName.contains("\\")) {
+            redirectAttributes.addFlashAttribute("message", "upload failed");
+            return "redirect:/file/status";
+        }
+
         try {
+            File uploadDir = new File(UPLOADED_FOLDER).getCanonicalFile();
+            File destFile = new File(uploadDir, fileName).getCanonicalFile();
+            if (!destFile.getPath().startsWith(uploadDir.getPath() + File.separator)) {
+                redirectAttributes.addFlashAttribute("message", "upload failed");
+                return "redirect:/file/status";
+            }
+
             // Get the file and save it somewhere
             byte[] bytes = file.getBytes();
-            Path path = Paths.get(UPLOADED_FOLDER + file.getOriginalFilename());
+            Path path = destFile.toPath();
             Files.write(path, bytes);
 
             redirectAttributes.addFlashAttribute("message",
-                    "You successfully uploaded '" + UPLOADED_FOLDER + file.getOriginalFilename() + "'");
+                    "You successfully uploaded '" + UPLOADED_FOLDER + fileName + "'");
 
         } catch (IOException e) {
             redirectAttributes.addFlashAttribute("message", "upload failed");
@@ -87,9 +101,21 @@ public class FileUpload {
         }
 
         String fileName = multifile.getOriginalFilename();
+        if (fileName == null || fileName.isEmpty() || !fileName.contains(".")
+                || SecurityUtil.pathFilter(fileName) == null
+                || fileName.contains("/") || fileName.contains("\\")) {
+            return "Upload failed. Illeagl picture.";
+        }
+
+        File uploadDir = new File(UPLOADED_FOLDER).getCanonicalFile();
+        File destFile = new File(uploadDir, fileName).getCanonicalFile();
+        if (!destFile.getPath().startsWith(uploadDir.getPath() + File.separator)) {
+            return "Upload failed. Illeagl picture.";
+        }
+
         String Suffix = fileName.substring(fileName.lastIndexOf(".")); // 获取文件后缀名
         String mimeType = multifile.getContentType(); // 获取MIME类型
-        String filePath = UPLOADED_FOLDER + fileName;
+        String filePath = destFile.getPath();
         File excelFile = convert(multifile);
 
 
@@ -141,7 +167,7 @@ public class FileUpload {
         try {
             // Get the file and save it somewhere
             byte[] bytes = multifile.getBytes();
-            Path path = Paths.get(UPLOADED_FOLDER + multifile.getOriginalFilename());
+            Path path = destFile.toPath();
             Files.write(path, bytes);
         } catch (IOException e) {
             logger.error(e.toString());
