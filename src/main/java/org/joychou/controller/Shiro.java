@@ -35,6 +35,8 @@ public class Shiro {
             byte[] aesDecrypt = acs.decrypt(b64DecodeRememberMe, KEYS).getBytes();
             ByteArrayInputStream bytes = new ByteArrayInputStream(aesDecrypt);
             ObjectInputStream in = new ObjectInputStream(bytes);
+            in.setObjectInputFilter(ObjectInputFilter.Config.createFilter(
+                    "org.apache.shiro.subject.**;java.lang.String;java.lang.Number;java.lang.Integer;java.lang.Long;java.lang.Boolean;java.util.LinkedHashMap;java.util.HashMap;java.util.LinkedHashSet;java.util.HashSet;java.util.ArrayList;java.util.Map$Entry;java.util.Map$Entry[];!*"));
             in.readObject();
             in.close();
         } catch (Exception e){
