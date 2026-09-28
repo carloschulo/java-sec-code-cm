@@ -23,6 +23,10 @@ public class PathTraversal {
      */
     @GetMapping("/path_traversal/vul")
     public String getImage(String filepath) throws IOException {
+        if (filepath == null || filepath.isEmpty() || SecurityUtil.pathFilter(filepath) == null) {
+            logger.info("Illegal file path: " + filepath);
+            return "Bad boy. Illegal file path.";
+        }
         return getImgBase64(filepath);
     }
 
