@@ -1,6 +1,7 @@
 package org.joychou.controller;
 
 import com.fasterxml.uuid.Generators;
+import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
@@ -57,13 +58,25 @@ public class FileUpload {
         }
 
         try {
+            String fileName = FilenameUtils.getName(file.getOriginalFilename());
+            if (fileName == null || fileName.isEmpty()) {
+                redirectAttributes.addFlashAttribute("message", "upload failed");
+                return "redirect:/file/status";
+            }
+
+            Path uploadDir = Paths.get(UPLOADED_FOLDER).toAbsolutePath().normalize();
+            Path destination = uploadDir.resolve(fileName).normalize();
+            if (!destination.startsWith(uploadDir) || destination.equals(uploadDir)) {
+                redirectAttributes.addFlashAttribute("message", "upload failed");
+                return "redirect:/file/status";
+            }
+
             // Get the file and save it somewhere
             byte[] bytes = file.getBytes();
-            Path path = Paths.get(UPLOADED_FOLDER + file.getOriginalFilename());
-            Files.write(path, bytes);
+            Files.write(destination, bytes);
 
             redirectAttributes.addFlashAttribute("message",
-                    "You successfully uploaded '" + UPLOADED_FOLDER + file.getOriginalFilename() + "'");
+                    "You successfully uploaded '" + destination.toString() + "'");
 
         } catch (IOException e) {
             redirectAttributes.addFlashAttribute("message", "upload failed");
@@ -86,12 +99,25 @@ public class FileUpload {
             return "Please select a file to upload";
         }
 
-        String fileName = multifile.getOriginalFilename();
+        String fileName = FilenameUtils.getName(multifile.getOriginalFilename());
+        if (fileName == null || fileName.isEmpty() || !fileName.contains(".")) {
+            return "Upload failed. Illeagl picture.";
+        }
+
+        Path uploadDir = Paths.get(UPLOADED_FOLDER).toAbsolutePath().normalize();
+        Path destination = uploadDir.resolve(fileName).normalize();
+        if (!destination.startsWith(uploadDir) || destination.equals(uploadDir)) {
+            return "Upload failed. Illeagl picture.";
+        }
+
         String Suffix = fileName.substring(fileName.lastIndexOf(".")); // 获取文件后缀名
         String mimeType = multifile.getContentType(); // 获取MIME类型
-        String filePath = UPLOADED_FOLDER + fileName;
+        String filePath = destination.toString();
         File excelFile = convert(multifile);
-
+        if (excelFile == null) {
+            deleteFile(filePath);
+            return "Upload failed. Illeagl picture.";
+        }
 
         // 判断文件后缀名是否在白名单内  校验1
         String[] picSuffixList = {".jpg", ".png", ".jpeg", ".gif", ".bmp", ".ico"};
@@ -141,8 +167,7 @@ public class FileUpload {
         try {
             // Get the file and save it somewhere
             byte[] bytes = multifile.getBytes();
-            Path path = Paths.get(UPLOADED_FOLDER + multifile.getOriginalFilename());
-            Files.write(path, bytes);
+            Files.write(destination, bytes);
         } catch (IOException e) {
             logger.error(e.toString());
             deleteFile(filePath);
@@ -155,7 +180,15 @@ public class FileUpload {
     }
 
     private void deleteFile(String filePath) {
-        File delFile = new File(filePath);
+        if (filePath == null || filePath.isEmpty()) {
+            return;
+        }
+        Path uploadDir = Paths.get(UPLOADED_FOLDER).toAbsolutePath().normalize();
+        Path targetPath = Paths.get(filePath).toAbsolutePath().normalize();
+        if (!targetPath.startsWith(uploadDir) || targetPath.equals(uploadDir)) {
+            return;
+        }
+        File delFile = targetPath.toFile();
         if(delFile.isFile() && delFile.exists()) {
             if (delFile.delete()) {
                 logger.info("[+] " + filePath + " delete successfully!");
@@ -172,10 +205,18 @@ public class FileUpload {
      * https://stackoverflow.com/questions/24339990/how-to-convert-a-multipart-file-to-file
      */
     private File convert(MultipartFile multiFile) throws Exception {
-        String fileName = multiFile.getOriginalFilename();
+        String fileName = FilenameUtils.getName(multiFile.getOriginalFilename());
+        if (fileName == null || !fileName.contains(".")) {
+            return null;
+        }
         String suffix = fileName.substring(fileName.lastIndexOf("."));
         UUID uuid = Generators.timeBasedGenerator().generate();
-        randomFilePath = UPLOADED_FOLDER + uuid + suffix;
+        Path uploadDir = Paths.get(UPLOADED_FOLDER).toAbsolutePath().normalize();
+        Path tempPath = uploadDir.resolve(uuid.toString() + suffix).normalize();
+        if (!tempPath.startsWith(uploadDir)) {
+            return null;
+        }
+        randomFilePath = tempPath.toString();
         // 随机生成一个同后缀名的文件
         File convFile = new File(randomFilePath);
         boolean ret = convFile.createNewFile();
