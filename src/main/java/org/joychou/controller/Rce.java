@@ -15,6 +15,8 @@ import javax.script.ScriptEngineManager;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.util.Collections;
+import java.util.Set;
 
 
 /**
@@ -27,8 +29,18 @@ import java.io.InputStreamReader;
 @RequestMapping("/rce")
 public class Rce {
 
+    private static final Set<String> ALLOWED_COMMANDS = Collections.emptySet();
+
+    private static boolean isAllowedCommand(String cmd) {
+        return cmd != null && ALLOWED_COMMANDS.contains(cmd.trim());
+    }
+
     @GetMapping("/runtime/exec")
     public String CommandExec(String cmd) {
+        if (!isAllowedCommand(cmd)) {
+            return "Command exec failed!!";
+        }
+
         Runtime run = Runtime.getRuntime();
         StringBuilder sb = new StringBuilder();
 
@@ -61,12 +73,14 @@ public class Rce {
      */
     @GetMapping("/ProcessBuilder")
     public String processBuilder(String cmd) {
+        if (!isAllowedCommand(cmd)) {
+            return "Command exec failed!!";
+        }
 
         StringBuilder sb = new StringBuilder();
 
         try {
-            String[] arrCmd = {"/bin/sh", "-c", cmd};
-            ProcessBuilder processBuilder = new ProcessBuilder(arrCmd);
+            ProcessBuilder processBuilder = new ProcessBuilder(cmd.trim());
             Process p = processBuilder.start();
             BufferedInputStream in = new BufferedInputStream(p.getInputStream());
             BufferedReader inBr = new BufferedReader(new InputStreamReader(in));
@@ -75,6 +89,9 @@ public class Rce {
             while ((tmpStr = inBr.readLine()) != null) {
                 sb.append(tmpStr);
             }
+
+            inBr.close();
+            in.close();
         } catch (Exception e) {
             return e.toString();
         }
