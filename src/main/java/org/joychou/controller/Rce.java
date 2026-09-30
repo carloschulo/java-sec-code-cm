@@ -2,6 +2,10 @@ package org.joychou.controller;
 
 import groovy.lang.GroovyShell;
 import lombok.extern.slf4j.Slf4j;
+import org.codehaus.groovy.ast.expr.ConstructorCallExpression;
+import org.codehaus.groovy.ast.expr.MethodPointerExpression;
+import org.codehaus.groovy.control.CompilerConfiguration;
+import org.codehaus.groovy.control.customizers.SecureASTCustomizer;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,6 +19,8 @@ import javax.script.ScriptEngineManager;
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.util.Arrays;
+import java.util.Collections;
 
 
 /**
@@ -125,7 +131,41 @@ public class Rce {
      */
     @GetMapping("groovy")
     public void groovyshell(String content) {
-        GroovyShell groovyShell = new GroovyShell();
+        if (content == null || content.isEmpty()) {
+            return;
+        }
+        CompilerConfiguration config = new CompilerConfiguration();
+        SecureASTCustomizer secure = new SecureASTCustomizer();
+        secure.setClosuresAllowed(false);
+        secure.setMethodDefinitionAllowed(false);
+        secure.setPackageAllowed(false);
+        secure.setImportsWhitelist(Collections.emptyList());
+        secure.setStarImportsWhitelist(Collections.emptyList());
+        secure.setStaticImportsWhitelist(Collections.emptyList());
+        secure.setStaticStarImportsWhitelist(Collections.emptyList());
+        secure.setIndirectImportCheckEnabled(true);
+        secure.setReceiversBlackList(Arrays.asList(
+            "java.lang.System",
+            "java.lang.Runtime",
+            "java.lang.ProcessBuilder",
+            "java.lang.Class",
+            "java.lang.ClassLoader",
+            "java.lang.Thread",
+            "java.io.File",
+            "java.io.FileInputStream",
+            "java.io.FileOutputStream",
+            "java.io.FileReader",
+            "java.io.FileWriter",
+            "groovy.lang.GroovyShell",
+            "groovy.lang.GroovyClassLoader",
+            "groovy.util.Eval"
+        ));
+        secure.setExpressionsBlacklist(Arrays.asList(
+            MethodPointerExpression.class,
+            ConstructorCallExpression.class
+        ));
+        config.addCompilationCustomizers(secure);
+        GroovyShell groovyShell = new GroovyShell(config);
         groovyShell.evaluate(content);
     }
 
