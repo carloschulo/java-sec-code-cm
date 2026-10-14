@@ -43,7 +43,19 @@ public class SSRF {
      */
     @RequestMapping(value = "/urlConnection/vuln", method = {RequestMethod.POST, RequestMethod.GET})
     public String URLConnectionVuln(String url) {
-        return HttpUtils.URLConnection(url);
+        // Decline not http/https protocol
+        if (!SecurityUtil.isHttp(url)) {
+            return "[-] SSRF check failed";
+        }
+
+        try {
+            SecurityUtil.startSSRFHook();
+            return HttpUtils.URLConnection(url);
+        } catch (SSRFException | IOException e) {
+            return e.getMessage();
+        } finally {
+            SecurityUtil.stopSSRFHook();
+        }
     }
 
 
