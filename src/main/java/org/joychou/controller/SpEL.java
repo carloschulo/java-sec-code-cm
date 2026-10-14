@@ -23,8 +23,11 @@ public class SpEL {
      */
     @RequestMapping("/spel/vuln1")
     public String spel_vuln1(String value) {
-        ExpressionParser parser = new SpelExpressionParser();
-        return parser.parseExpression(value).getValue().toString();
+        SimpleEvaluationContext context = SimpleEvaluationContext.forReadOnlyDataBinding().build();
+        SpelExpressionParser parser = new SpelExpressionParser();
+        Expression expression = parser.parseExpression(value);
+        Object result = expression.getValue(context);
+        return (result != null) ? result.toString() : "";
     }
 
     /**
