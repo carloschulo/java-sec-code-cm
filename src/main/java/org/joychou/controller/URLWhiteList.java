@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
@@ -100,18 +101,32 @@ public class URLWhiteList {
 
         logger.info("url:  " + url);
 
-        if (!SecurityUtil.isHttp(url)) {
+        if (url == null || !SecurityUtil.isHttp(url) || url.contains("\\") || url.contains("@")) {
             return;
         }
 
-        URL u = new URL(url);
-        String host = u.getHost();
+        URI uri;
+        try {
+            uri = new URI(url);
+        } catch (Exception e) {
+            return;
+        }
+
+        if (uri.getUserInfo() != null) {
+            return;
+        }
+
+        String host = uri.getHost();
         logger.info("host:  " + host);
+        if (host == null) {
+            return;
+        }
 
         // endsWith .
         for (String domain : domainwhitelist) {
-            if (host.endsWith("." + domain)) {
+            if (host.equalsIgnoreCase(domain) || host.toLowerCase().endsWith("." + domain)) {
                 res.sendRedirect(url);
+                return;
             }
         }
 
