@@ -117,9 +117,15 @@ public class SSRF {
      */
     @GetMapping("/openStream")
     public void openStream(@RequestParam String url, HttpServletResponse response) throws IOException {
+        // Decline not http/https protocol
+        if (url == null || !SecurityUtil.isHttp(url)) {
+            return;
+        }
+
         InputStream inputStream = null;
         OutputStream outputStream = null;
         try {
+            SecurityUtil.startSSRFHook();
             String downLoadImgFileName = WebUtils.getNameWithoutExtension(url) + "." + WebUtils.getFileExtension(url);
             // download
             response.setHeader("content-disposition", "attachment;fileName=" + downLoadImgFileName);
@@ -136,6 +142,7 @@ public class SSRF {
         } catch (Exception e) {
             logger.error(e.toString());
         } finally {
+            SecurityUtil.stopSSRFHook();
             if (inputStream != null) {
                 inputStream.close();
             }
