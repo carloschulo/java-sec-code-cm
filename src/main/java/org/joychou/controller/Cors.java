@@ -25,6 +25,9 @@ public class Cors {
     @GetMapping("/vuln/origin")
     public String vuls1(HttpServletRequest request, HttpServletResponse response) {
         String origin = request.getHeader("origin");
+        if (origin != null && SecurityUtil.checkURL(origin) == null) {
+            return "Origin is not safe.";
+        }
         response.setHeader("Access-Control-Allow-Origin", origin); // set origin from header
         response.setHeader("Access-Control-Allow-Credentials", "true");  // allow cookie
         return info;
