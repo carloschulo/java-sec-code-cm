@@ -174,6 +174,9 @@ public class SecurityUtil {
      * @return illegal file path return null
      */
     public static String pathFilter(String filepath) {
+        if (filepath == null) {
+            return null;
+        }
         String temp = filepath;
 
         // use while to sovle multi urlencode
