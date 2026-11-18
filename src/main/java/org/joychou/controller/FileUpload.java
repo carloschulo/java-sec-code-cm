@@ -56,14 +56,21 @@ public class FileUpload {
             return "redirect:/file/status";
         }
 
+        String fileName = file.getOriginalFilename();
+        if (!isPathSafe(fileName)) {
+            logger.error("[-] Path traversal detected: " + fileName);
+            redirectAttributes.addFlashAttribute("message", "upload failed");
+            return "redirect:/file/status";
+        }
+
         try {
             // Get the file and save it somewhere
             byte[] bytes = file.getBytes();
-            Path path = Paths.get(UPLOADED_FOLDER + file.getOriginalFilename());
+            Path path = Paths.get(UPLOADED_FOLDER + fileName);
             Files.write(path, bytes);
 
             redirectAttributes.addFlashAttribute("message",
-                    "You successfully uploaded '" + UPLOADED_FOLDER + file.getOriginalFilename() + "'");
+                    "You successfully uploaded '" + UPLOADED_FOLDER + fileName + "'");
 
         } catch (IOException e) {
             redirectAttributes.addFlashAttribute("message", "upload failed");
@@ -87,10 +94,19 @@ public class FileUpload {
         }
 
         String fileName = multifile.getOriginalFilename();
+        if (!isPathSafe(fileName) || !fileName.contains(".")) {
+            logger.error("[-] Illegal file path: " + fileName);
+            return "Upload failed. Illeagl picture.";
+        }
+
         String Suffix = fileName.substring(fileName.lastIndexOf(".")); // 获取文件后缀名
         String mimeType = multifile.getContentType(); // 获取MIME类型
         String filePath = UPLOADED_FOLDER + fileName;
         File excelFile = convert(multifile);
+        if (excelFile == null) {
+            logger.error("[-] Convert file failed");
+            return "Upload failed. Illeagl picture.";
+        }
 
 
         // 判断文件后缀名是否在白名单内  校验1
@@ -141,7 +157,7 @@ public class FileUpload {
         try {
             // Get the file and save it somewhere
             byte[] bytes = multifile.getBytes();
-            Path path = Paths.get(UPLOADED_FOLDER + multifile.getOriginalFilename());
+            Path path = Paths.get(UPLOADED_FOLDER + fileName);
             Files.write(path, bytes);
         } catch (IOException e) {
             logger.error(e.toString());
@@ -152,6 +168,25 @@ public class FileUpload {
         logger.info("[+] Safe file. Suffix: {}, MIME: {}", Suffix, mimeType);
         logger.info("[+] Successfully uploaded {}", filePath);
         return String.format("You successfully uploaded '%s'", filePath);
+    }
+
+    private boolean isPathSafe(String fileName) {
+        if (fileName == null || fileName.isEmpty()) {
+            return false;
+        }
+        if (SecurityUtil.pathFilter(fileName) == null) {
+            return false;
+        }
+        if (fileName.contains("/") || fileName.contains("\\")) {
+            return false;
+        }
+        try {
+            File uploadDir = new File(UPLOADED_FOLDER).getCanonicalFile();
+            File destFile = new File(uploadDir, fileName).getCanonicalFile();
+            return destFile.getParentFile() != null && destFile.getParentFile().equals(uploadDir);
+        } catch (IOException e) {
+            return false;
+        }
     }
 
     private void deleteFile(String filePath) {
@@ -173,11 +208,18 @@ public class FileUpload {
      */
     private File convert(MultipartFile multiFile) throws Exception {
         String fileName = multiFile.getOriginalFilename();
+        if (!isPathSafe(fileName) || !fileName.contains(".")) {
+            return null;
+        }
         String suffix = fileName.substring(fileName.lastIndexOf("."));
         UUID uuid = Generators.timeBasedGenerator().generate();
         randomFilePath = UPLOADED_FOLDER + uuid + suffix;
         // 随机生成一个同后缀名的文件
-        File convFile = new File(randomFilePath);
+        File convFile = new File(randomFilePath).getCanonicalFile();
+        File uploadDir = new File(UPLOADED_FOLDER).getCanonicalFile();
+        if (!convFile.getParentFile().equals(uploadDir)) {
+            return null;
+        }
         boolean ret = convFile.createNewFile();
         if (!ret) {
             return null;
