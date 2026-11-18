@@ -90,6 +90,9 @@ public class XXE {
             logger.info(body);
 
             SAXBuilder builder = new SAXBuilder();
+            builder.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            builder.setFeature("http://xml.org/sax/features/external-general-entities", false);
+            builder.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
             // org.jdom2.Document document
             builder.build(new InputSource(new StringReader(body)));  // cause xxe
             return "SAXBuilder xxe vuln code";
